@@ -20,7 +20,7 @@ export const downloadFromS3 = async (file_key: string) => {
         })
 
         //todo:: create file name
-        const file_name = "tmp/" +  Date.now().toString()+'.pdf';
+        const file_name = "/tmp/pdf-" +  Date.now().toString()+'.pdf';
         const params = {
             Bucket: process.env.NEXT_PUBLIC_AWS_S3_BUCKET!,
             Key: file_key
@@ -28,7 +28,8 @@ export const downloadFromS3 = async (file_key: string) => {
 
         const obj = await s3.getObject(params).promise();
 
-
+        fs.writeFileSync(file_name,obj.Body as Buffer)
+        return file_name;
 
     }catch(error){
         console.log(error);
