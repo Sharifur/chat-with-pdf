@@ -1,32 +1,64 @@
 "use client";
 
 import { uploadToS3 } from "@/lib/aws";
-import { Inbox } from "lucide-react";
-import React, {useCallback} from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Inbox, Loader2 } from "lucide-react";
+import React, {useCallback, useState} from "react";
 import { useDropzone } from "react-dropzone";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const FileUpload = () => {
 
+    const [uploading,setUploading] = useState(false);
 
+    const {mutate,isLoading} = useMutation({
+        mutationFn :async ({file_key,file_name} : {file_key : String, file_name: String}) => {
+           
+            const response = axios.post('api/create-chat',{
+                file_key,file_name
+            })
 
+            return (await response).data;
+            
+        }
+    });
 
     const {getRootProps,getInputProps,isDragActive} = useDropzone({
+
         accept: {"application/pdf" : ['.pdf']},
         onDrop: async (acceptedFiles) => {
-
+            setUploading(true);
             const file = acceptedFiles[0];
 
             if(file.size > 10 * 1024 * 1024){
-                alert("upload file less than 10MB");
+                toast.error("upload file less than 10MB");
                 return;
             }
 
 
             try{
-                const uploadedFile = await uploadToS3(file);
-                console.log('data', uploadedFile);
+                const data = await uploadToS3(file);
+                
+                if(!data?.file_key || !data?.file_name){
+                    toast.error("Something Went Wrong!!");
+                    return;
+                }
+
+                mutate(data,{
+                    onSuccess: (data) => {
+                        console.log(data);
+                    },
+                    onError: (error) => {
+                        console.log(error)
+                        toast.error("Error Creating Chat");
+                        return;
+                    }
+                });
             }catch(error){
 
+            } finally{
+                setUploading(false)
             }
 
             console.log(acceptedFiles);
@@ -41,10 +73,21 @@ const FileUpload = () => {
                 })
             }>
                 <input {...getInputProps()} />
-                <Inbox
-                className="w10 h10 text-blue-500"
-                />
-                <p className="mt-2 text-sm text-slate-400">Drop PDF Here</p>
+                
+                {uploading || isLoading ? (
+                    <>
+                        <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
+                        <p className="mt-2 text-sm text-slate-400">Uploading PDF.....</p>
+                    </>
+                ) : (
+                    <> 
+                    <Inbox className="w10 h10 text-blue-500" />
+                    <p className="mt-2 text-sm text-slate-400">Drop PDF Here</p>
+                    </> 
+                )
+                }
+               
+
             </div>
         </div>
     )
