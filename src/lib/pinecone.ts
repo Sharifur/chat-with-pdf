@@ -2,6 +2,7 @@ import {Pinecone} from "@pinecone-database/pinecone";
 import { downloadFromS3 } from "./aws-server";
 import { PDFLoader} from "langchain/document_loaders/fs/pdf";
 import {Document, RecursiveCharacterTextSplitter} from "@pinecone-database/doc-splitter";
+import { getEmbeddings } from "./embedding";
 
 
 let pinecone: Pinecone | null = null;
@@ -48,6 +49,15 @@ export const loadS3IntoPinecone = async (file_key: string) => {
 }
 
 //asunc function embedDocument
+async function embedDocument(doc: Document){
+    try{
+        const embeddings = await getEmbeddings(doc.pageContent);
+        const hash = '';
+    }catch(error){
+        console.log('error embedding document',error);
+        throw error;
+    }
+}
 
 
 export const truncateStringByByte = (str: string,  bytes: number) => {
