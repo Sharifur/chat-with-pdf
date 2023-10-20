@@ -24,7 +24,7 @@ export async function  uploadToS3(file: File){
             Key: file_name,
             Body: file
         }
-        console.log(process.env.NEXT_PUBLIC_AWS_S3_BUCKET);
+        // console.log(process.env.NEXT_PUBLIC_AWS_S3_BUCKET);
         const upload = aws.putObject(params).on('httpUploadProgress', evt => {
             console.log(`upload file progress`,parseInt( ((evt.loaded * 100 ) / evt.total).toString() ))
         }).promise();
