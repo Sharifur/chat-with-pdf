@@ -3,6 +3,9 @@ import { downloadFromS3 } from "./aws-server";
 import { PDFLoader} from "langchain/document_loaders/fs/pdf";
 import {Document, RecursiveCharacterTextSplitter} from "@pinecone-database/doc-splitter";
 import { getEmbeddings } from "./embedding";
+import md5 from 'md5';
+import { Vector } from "@pinecone-database/pinecone/dist/pinecone-generated-ts-fetch";
+import { metadata } from "@/app/layout";
 
 
 let pinecone: Pinecone | null = null;
@@ -43,8 +46,9 @@ export const loadS3IntoPinecone = async (file_key: string) => {
     const documents = await Promise.all(pages.map(page => prepareDocument(page)));
 
     //3. vectorise and embed individual documents
-
-
+    const vectors = await Promise.all(documents.flat().map(doc => embedDocument(doc)))
+    //4. upload to pinecode
+    
     
 }
 
@@ -52,7 +56,17 @@ export const loadS3IntoPinecone = async (file_key: string) => {
 async function embedDocument(doc: Document){
     try{
         const embeddings = await getEmbeddings(doc.pageContent);
-        const hash = '';
+        const hash = md5(doc.pageContent);
+
+        return {
+            id: hash,
+            values: embeddings,
+            metadata : {
+                text: doc.metadata.text,
+                pageNumber: doc.metadata.pageNumber
+            }
+        } as Vector;
+
     }catch(error){
         console.log('error embedding document',error);
         throw error;
