@@ -7,8 +7,11 @@ import React, {useCallback, useState} from "react";
 import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const FileUpload = () => {
+
+    const router = useRouter();
 
     const [uploading,setUploading] = useState(false);
 
@@ -46,13 +49,15 @@ const FileUpload = () => {
                 }
 
                 mutate(data,{
-                    onSuccess: (data) => {
-                        console.log(data);
+                    onSuccess: ({chat_id}) => {
+                        //todo:: redirect user to chat page
+                        toast.success(`Chat has been created`);
+                        router.push(`'/chat/${chat_id}`);
+
                     },
                     onError: (error) => {
-                        console.log(error)
                         toast.error("Error Creating Chat");
-                        return;
+                        console.log(error)
                     }
                 });
             }catch(error){

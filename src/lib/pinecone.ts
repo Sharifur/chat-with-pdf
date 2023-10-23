@@ -1,4 +1,4 @@
-import {Pinecone} from "@pinecone-database/pinecone";
+import {Pinecone,PineconeRecord} from "@pinecone-database/pinecone";
 import { downloadFromS3 } from "./aws-server";
 import { PDFLoader} from "langchain/document_loaders/fs/pdf";
 import {Document, RecursiveCharacterTextSplitter} from "@pinecone-database/doc-splitter";
@@ -6,21 +6,17 @@ import { getEmbeddings } from "./embedding";
 import md5 from 'md5';
 import { Vector } from "@pinecone-database/pinecone/dist/pinecone-generated-ts-fetch";
 import { metadata } from "@/app/layout";
+import { convertToAscii } from "./utils";
 
 
-let pinecone: Pinecone | null = null;
 
 
-export const getPineconeClient = async () => {
-    if(!pinecone){
-        pinecone = new Pinecone({
-            environment: process.env.PINECONE_API_ENVIRONMENT!,
-            apiKey: process.env.PINECONE_API_VALUE!
-        })
-    }
-
-    return pinecone;
-}
+export const getPineconeClient = () => {
+    return new Pinecone({
+      environment: process.env.PINECONE_ENVIRONMENT!,
+      apiKey: process.env.PINECONE_API_KEY!,
+    });
+  };
 
 type PDFPage = {
     pageContent: string;
@@ -46,10 +42,19 @@ export const loadS3IntoPinecone = async (file_key: string) => {
     const documents = await Promise.all(pages.map(page => prepareDocument(page)));
 
     //3. vectorise and embed individual documents
-    const vectors = await Promise.all(documents.flat().map(doc => embedDocument(doc)))
+    const vectors = await Promise.all(documents.flat().map(doc => embedDocument(doc)));
+
     //4. upload to pinecode
     
+    const client = await getPineconeClient();
+    const pineconeIndex = await client.Index('chat-pdf');
+    console.log('intersting vectors into pinecone')
+ 
+    const namespace = pineconeIndex.namespace(convertToAscii(file_key));
+
+    namespace.upsert(vectors);
     
+    return documents[0];
 }
 
 //asunc function embedDocument
@@ -65,7 +70,7 @@ async function embedDocument(doc: Document){
                 text: doc.metadata.text,
                 pageNumber: doc.metadata.pageNumber
             }
-        } as Vector;
+        } as PineconeRecord;
 
     }catch(error){
         console.log('error embedding document',error);
